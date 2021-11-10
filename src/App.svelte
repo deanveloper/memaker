@@ -4,7 +4,7 @@
 
 <main>
 	<header>
-		<h1>mememe</h1>
+		<h1>memaker</h1>
 		<h2>a good meme maker</h2>
 	</header>
 
