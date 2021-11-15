@@ -4,24 +4,35 @@
 	import { scale, scaleKeepRatio } from './dimensionScaling.js';
 	
 	export let selected = false;
+	export let editing = false;
 	export let padding = 0;
+	export let loaded = true;
+	let mounted = false;
+	onMount(() => {
+		mounted = true;
+	});
 
 	let layerElem = undefined;
 	let dimensions = {
 		initialized: false,
-		initial: {
-			width: 0,
-			height: 0,
-		},
-		current: {
-			width: 0,
-			height: 0,
-		}
+		initial: { width: 0, height: 0 },
+		current: { width: 0, height: 0 }
 	}
-	let position = {
-		top: 0,
-		left: 0,
-	};
+	let position = { top: 20, left: 20 };
+
+	$: if (loaded && mounted) {
+		dimensions = {
+			initial: {
+				width: layerElem.offsetWidth,
+				height: layerElem.offsetHeight,
+			},
+			current: {
+				width: layerElem.offsetWidth,
+				height: layerElem.offsetHeight,
+			},
+			initialized: true,
+		};
+	}
 
 	$: scaleDimensions = {
 		x: dimensions.current.width / dimensions.initial.width,
@@ -30,29 +41,20 @@
 	$: scaleCss = `transform: scale(${scaleDimensions.x}, ${scaleDimensions.y}); transform-origin: top left;`;
 	$: positionCss = `top: ${position.top}px; left: ${position.left}px;`;
 	$: paddingCss = `padding: ${padding}px;`;
-	$: dimensionsCss = dimensions.initialized ? `width: ${dimensions.current.width}px; height: ${dimensions.current.height}px;` : '';
-
-	onMount(() => {
-		dimensions.initial = {
-			width: layerElem.offsetWidth,
-			height: layerElem.offsetHeight,
-		};
-		dimensions.current = {
-			width: layerElem.offsetWidth,
-			height: layerElem.offsetHeight,
-		};
-		dimensions.initialized = true;
-	});
+	let dimensionsCss = '';
+	$: if (dimensions.initialized) {
+		dimensionsCss = `width: ${dimensions.current.width}px; height: ${dimensions.current.height}px;`;
+	}
 
 	let holdingShift = false;
 	let mouseIsDown = false;
 
-	function handleKeyDown(ev) {
+	function detectShift(ev) {
 		if (ev.key === 'Shift') {
 			holdingShift = true;
 		}
 	}
-	function handleKeyUp(ev) {
+	function detectUnshift(ev) {
 		if (ev.key === 'Shift') {
 			holdingShift = false;
 		}
@@ -68,7 +70,7 @@
 		}
 	}
 	function onMouseMove(ev) {
-		if (selected && mouseIsDown) {
+		if (selected && !editing && mouseIsDown) {
 			position.top += ev.movementY;
 			position.left += ev.movementX;
 		}
@@ -86,16 +88,19 @@
 	}
 </script>
 
-<svelte:window on:keydown={handleKeyDown} on:keyup={handleKeyUp} on:mouseup={onMouseUp} on:mousemove={onMouseMove} />
+<svelte:window on:keydown={detectShift} on:keyup={detectUnshift} on:mouseup={onMouseUp} on:mousemove={onMouseMove} />
 
 <div class="layer"
 	class:selected
 	class:holdingShift
+	class:editing
 	style={positionCss + paddingCss + dimensionsCss}
-	on:click
+	on:click|stopPropagation
+	on:dblclick|stopPropagation
 	on:mousedown|self={onMouseDown}
 	bind:this={layerElem}
 >
+	{#if selected}
 	<div class="handle northy westy north-west">
 		<LayerWindowHandle on:move={mv => handleMove("north-west", mv.detail)} />
 	</div>
@@ -120,6 +125,7 @@
 	<div class="handle southy easty south-east">
 		<LayerWindowHandle on:move={mv => handleMove("south-east", mv.detail)} />
 	</div>
+	{/if}
 
 	<div class="container" style={scaleCss + positionCss}>
 		<slot></slot>
@@ -129,16 +135,17 @@
 <style>
 .layer {
 	position: absolute;
+	cursor: pointer;
 
-	cursor: move;
 	top: 0;
 	left: 0;
 }
 .layer.selected {
-	border: 1px dashed black;
+	outline: 1px dashed black;
+	cursor: move;
 }
-.layer:not(.selected) .handle {
-	display: none;
+.layer.editing.editing {
+	cursor: text;
 }
 
 .handle {
@@ -148,8 +155,16 @@
 }
 
 .container {
+	width: max-content;
+	height: max-content;
+
 	pointer-events: none;
 	user-select: none;
+}
+
+.editing .container {
+	pointer-events: initial;
+	user-select: initial;
 }
 
 .northy {
