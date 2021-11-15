@@ -28,7 +28,7 @@
 <svelte:window on:mouseup={onMouseUp} on:mousemove={onMouseMove} />
 
 <div
-	on:mousedown={onMouseDown}
+	on:mousedown|stopPropagation={onMouseDown}
 ></div>
 
 <style>
