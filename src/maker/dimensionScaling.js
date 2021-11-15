@@ -72,19 +72,50 @@ function scaleKeepRatioCorner(handle, diff, ratio) {
 		x: toCenterVectorNormalized.x * ratioLineComponentLength,
 		y: toCenterVectorNormalized.y * ratioLineComponentLength,
 	}
-	console.log(scalingVector);
 
 	return scale(handle, scalingVector);
 }
 
 function scaleKeepRatioSide(handle, diff, ratio) {
-	const positionDiff = {
-		top: 0,
-		left: 0,
-	};
-	const dimensionsDiff = {
-		width: 0,
-		height: 0,
-	};
+	const scales = [];
+	switch (handle) {
+		case 'north':
+			scales.push(scale('north', { x: 0, y: diff.y }));
+			scales.push(scale('east', { x: -diff.y * (1 / ratio) / 2, y: 0 }));
+			scales.push(scale('west', { x: diff.y * (1 / ratio) / 2, y: 0 }));
+			break;
+		case 'south':
+			scales.push(scale('south', { x: 0, y: diff.y }));
+			scales.push(scale('east', { x: diff.y * (1 / ratio) / 2, y: 0 }));
+			scales.push(scale('west', { x: -diff.y * (1 / ratio) / 2, y: 0 }));
+			break;
+		case 'east':
+			scales.push(scale('east', { x: diff.x, y: 0 }));
+			scales.push(scale('north', { x: 0, y: -diff.x * ratio / 2 }));
+			scales.push(scale('south', { x: 0, y: diff.x * ratio / 2 }));
+			break;
+		case 'west':
+			scales.push(scale('west', { x: diff.x, y: 0 }));
+			scales.push(scale('north', { x: 0, y: diff.x * ratio / 2 }));
+			scales.push(scale('south', { x: 0, y: -diff.x * ratio / 2 }));
+			break;
+	}
 
+	const mergedScales = {
+		position: {
+			top: 0,
+			left: 0,
+		},
+		dimensions: {
+			width: 0,
+			height: 0,
+		}
+	};
+	for (const scale of scales) {
+		mergedScales.position.top += scale.position.top;
+		mergedScales.position.left += scale.position.left;
+		mergedScales.dimensions.width += scale.dimensions.width;
+		mergedScales.dimensions.height += scale.dimensions.height;
+	}
+	return mergedScales;
 }
